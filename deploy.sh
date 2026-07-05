@@ -6,9 +6,13 @@ REPO_URL="${REPO_URL:-https://github.com/moneyparking/Signalreview-Alibaba-Qwen.
 SERVICE_NAME="${SERVICE_NAME:-signalreview-qwen}"
 PORT="${PORT:-8000}"
 PYTHON_BIN="${PYTHON_BIN:-python3}"
+SERVER_PUBLIC_IP="${SERVER_PUBLIC_IP:-8.220.101.4}"
+QWEN_MODEL_VALUE="${QWEN_MODEL:-qwen2.5-72b-instruct}"
+QWEN_BASE_URL_VALUE="${QWEN_BASE_URL:-https://dashscope-intl.aliyuncs.com/compatible-mode/v1}"
+ALLOWED_ORIGINS_VALUE="${ALLOWED_ORIGINS:-*}"
 
 if [[ "${EUID}" -ne 0 ]]; then
-  echo "Run as root: sudo bash deploy.sh"
+  echo "Run as root: sudo -E bash deploy.sh"
   exit 1
 fi
 
@@ -38,12 +42,13 @@ pip install -r requirements.txt
 
 cat > "${APP_DIR}/.env" <<ENV
 DASHSCOPE_API_KEY=${DASHSCOPE_API_KEY}
-QWEN_MODEL=${QWEN_MODEL:-qwen2.5-72b-instruct}
-QWEN_BASE_URL=${QWEN_BASE_URL:-https://dashscope-intl.aliyuncs.com/compatible-mode/v1}
-ALLOWED_ORIGINS=${ALLOWED_ORIGINS:-*}
+QWEN_MODEL=${QWEN_MODEL_VALUE}
+QWEN_BASE_URL=${QWEN_BASE_URL_VALUE}
+ALLOWED_ORIGINS=${ALLOWED_ORIGINS_VALUE}
 SIGNALREVIEW_ENV=hackathon
 PORT=${PORT}
 ENV
+chmod 600 "${APP_DIR}/.env"
 
 cat > "/etc/systemd/system/${SERVICE_NAME}.service" <<SERVICE
 [Unit]
@@ -71,4 +76,7 @@ sleep 2
 systemctl --no-pager --full status "${SERVICE_NAME}" || true
 curl -fsS "http://127.0.0.1:${PORT}/api/health" || true
 
-echo "Deployment complete. API is listening on port ${PORT}."
+echo "Deployment complete."
+echo "Local health:  http://127.0.0.1:${PORT}/api/health"
+echo "Public health: http://${SERVER_PUBLIC_IP}:${PORT}/api/health"
+echo "API docs:      http://${SERVER_PUBLIC_IP}:${PORT}/docs"
