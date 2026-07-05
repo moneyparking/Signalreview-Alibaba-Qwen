@@ -1,0 +1,28 @@
+"""FastAPI routes for the isolated SignalReview Alibaba Qwen hackathon demo."""
+
+from __future__ import annotations
+
+from fastapi import APIRouter, HTTPException
+
+from live_match_processor import MatchContext, build_processor_from_env
+
+router = APIRouter(prefix="/api", tags=["qwen-live-review"])
+
+
+@router.get("/health")
+async def health() -> dict[str, str]:
+    return {
+        "status": "ok",
+        "service": "signalreview-alibaba-qwen-hackathon",
+        "runtime": "fastapi",
+    }
+
+
+@router.post("/review-live-match")
+async def review_live_match(context: MatchContext) -> dict:
+    try:
+        processor = build_processor_from_env()
+        review = await processor.review_match(context)
+        return review.model_dump()
+    except Exception as exc:  # noqa: BLE001 - API boundary returns sanitized error only.
+        raise HTTPException(status_code=502, detail=f"Qwen review failed: {exc}") from exc
