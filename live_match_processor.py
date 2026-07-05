@@ -17,6 +17,7 @@ import os
 import re
 from dataclasses import dataclass
 from typing import Any, Dict, List, Literal, Optional
+from urllib.parse import urlparse
 
 import httpx
 from pydantic import BaseModel, Field, ValidationError
@@ -34,6 +35,9 @@ RESPONSIBLE_USE_NOTE = (
     "It does not provide betting predictions, gambling advice, bookmaker recommendations, "
     "staking instructions, certainty, guarantees, or financial advice."
 )
+
+DEFAULT_QWEN_MODEL = "qwen2.5-72b-instruct"
+DEFAULT_QWEN_BASE_URL = "https://dashscope-intl.aliyuncs.com/compatible-mode/v1"
 
 
 class MatchContext(BaseModel):
@@ -74,8 +78,8 @@ class HackathonReview(BaseModel):
 @dataclass(frozen=True)
 class QwenSettings:
     api_key: str
-    model: str = "qwen2.5-72b-instruct"
-    base_url: str = "https://dashscope-intl.aliyuncs.com/compatible-mode/v1"
+    model: str = DEFAULT_QWEN_MODEL
+    base_url: str = DEFAULT_QWEN_BASE_URL
     timeout_seconds: float = 45.0
 
     @classmethod
@@ -85,10 +89,36 @@ class QwenSettings:
             raise RuntimeError("DASHSCOPE_API_KEY is required")
         return cls(
             api_key=api_key,
-            model=os.getenv("QWEN_MODEL", cls.model).strip() or cls.model,
-            base_url=os.getenv("QWEN_BASE_URL", cls.base_url).rstrip("/"),
+            model=os.getenv("QWEN_MODEL", DEFAULT_QWEN_MODEL).strip() or DEFAULT_QWEN_MODEL,
+            base_url=normalize_qwen_base_url(os.getenv("QWEN_BASE_URL", DEFAULT_QWEN_BASE_URL)),
             timeout_seconds=float(os.getenv("QWEN_TIMEOUT_SECONDS", "45")),
         )
+
+    def redacted(self) -> Dict[str, Any]:
+        parsed = urlparse(self.base_url)
+        return {
+            "model": self.model,
+            "base_url": self.base_url,
+            "host": parsed.netloc,
+            "has_api_key": bool(self.api_key),
+            "api_key_prefix": self.api_key[:4] + "..." if self.api_key else "missing",
+            "timeout_seconds": self.timeout_seconds,
+        }
+
+
+def normalize_qwen_base_url(raw: str) -> str:
+    value = (raw or DEFAULT_QWEN_BASE_URL).strip().rstrip("/")
+    if value.endswith("/chat/completions"):
+        value = value[: -len("/chat/completions")]
+    return value
+
+
+def qwen_runtime_diagnostics() -> Dict[str, Any]:
+    try:
+        settings = QwenSettings.from_env()
+        return {"status": "configured", **settings.redacted()}
+    except Exception as exc:  # noqa: BLE001 - diagnostic endpoint must stay resilient.
+        return {"status": "misconfigured", "error": str(exc)}
 
 
 class QwenCloudClient:
@@ -109,6 +139,10 @@ class QwenCloudClient:
         }
         async with httpx.AsyncClient(timeout=self.settings.timeout_seconds) as client:
             response = await client.post(url, headers=headers, json=payload)
+            if response.status_code == 403:
+                raise RuntimeError(self._format_403(url, response.text))
+            if response.status_code == 401:
+                raise RuntimeError(self._format_401(url, response.text))
             response.raise_for_status()
             data = response.json()
         content = data.get("choices", [{}])[0].get("message", {}).get("content", "{}")
@@ -116,6 +150,21 @@ class QwenCloudClient:
             return json.loads(content)
         except json.JSONDecodeError as exc:
             raise RuntimeError(f"Qwen returned non-JSON content: {content[:500]}") from exc
+
+    def _format_403(self, url: str, body: str) -> str:
+        return (
+            "Qwen endpoint returned 403 Forbidden. FastAPI is healthy, but Alibaba rejected the request. "
+            f"Checked url={url}; model={self.settings.model}; host={urlparse(self.settings.base_url).netloc}. "
+            "Most likely causes: API key is not authorized for this workspace endpoint, model name is not enabled in this region/workspace, "
+            "or QWEN_BASE_URL points to a MaaS workspace that requires a different key. "
+            f"Provider body preview={body[:300]}"
+        )
+
+    def _format_401(self, url: str, body: str) -> str:
+        return (
+            "Qwen endpoint returned 401 Unauthorized. Verify DASHSCOPE_API_KEY and that the key is exported into the systemd service env. "
+            f"Checked url={url}; model={self.settings.model}; provider body preview={body[:300]}"
+        )
 
 
 class LiveMatchProcessor:
@@ -157,7 +206,7 @@ class LiveMatchProcessor:
             "orchestrator_verdict": "string",
             "transparency_notes": ["string"],
             "responsible_use_note": RESPONSIBLE_USE_NOTE,
-            "raw_model": os.getenv("QWEN_MODEL", "qwen2.5-72b-instruct"),
+            "raw_model": os.getenv("QWEN_MODEL", DEFAULT_QWEN_MODEL),
         }
         user = {
             "task": "Run Statistician, Skeptic, Upside Scout, and Orchestrator review for this match context.",
@@ -175,10 +224,12 @@ class LiveMatchProcessor:
         data["match"] = f"{context.home_team} vs {context.away_team}"
         data["competition"] = context.competition
         data["responsible_use_note"] = RESPONSIBLE_USE_NOTE
-        data["raw_model"] = os.getenv("QWEN_MODEL", "qwen2.5-72b-instruct")
+        data["raw_model"] = os.getenv("QWEN_MODEL", DEFAULT_QWEN_MODEL)
         data["confidence_band"] = self._safe_confidence(data.get("confidence_band"))
         data["value_edge"] = self._clean_text(str(data.get("value_edge") or "Scenario review only"))
-        data["orchestrator_verdict"] = self._clean_text(str(data.get("orchestrator_verdict") or "Insufficient verified evidence for a stronger verdict."))
+        data["orchestrator_verdict"] = self._clean_text(
+            str(data.get("orchestrator_verdict") or "Insufficient verified evidence for a stronger verdict.")
+        )
         data["risk_flags"] = [self._clean_text(str(item)) for item in data.get("risk_flags", []) if str(item).strip()]
         data["transparency_notes"] = [
             self._clean_text(str(item)) for item in data.get("transparency_notes", []) if str(item).strip()
