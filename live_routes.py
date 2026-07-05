@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from fastapi import APIRouter, HTTPException
 
-from live_match_processor import MatchContext, build_processor_from_env
+from live_match_processor import MatchContext, build_processor_from_env, qwen_runtime_diagnostics
 
 router = APIRouter(prefix="/api", tags=["qwen-live-review"])
 
@@ -16,6 +16,11 @@ async def health() -> dict[str, str]:
         "service": "signalreview-alibaba-qwen-hackathon",
         "runtime": "fastapi",
     }
+
+
+@router.get("/qwen-health")
+async def qwen_health() -> dict:
+    return qwen_runtime_diagnostics()
 
 
 @router.post("/review-live-match")
