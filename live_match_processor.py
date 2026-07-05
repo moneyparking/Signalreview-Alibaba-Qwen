@@ -121,6 +121,35 @@ def qwen_runtime_diagnostics() -> Dict[str, Any]:
         return {"status": "misconfigured", "error": str(exc)}
 
 
+async def qwen_models_probe() -> Dict[str, Any]:
+    try:
+        settings = QwenSettings.from_env()
+    except Exception as exc:  # noqa: BLE001
+        return {"status": "misconfigured", "error": str(exc)}
+
+    url = f"{settings.base_url}/models"
+    headers = {"Authorization": f"Bearer {settings.api_key}", "Content-Type": "application/json"}
+    async with httpx.AsyncClient(timeout=settings.timeout_seconds) as client:
+        try:
+            response = await client.get(url, headers=headers)
+        except Exception as exc:  # noqa: BLE001
+            return {"status": "request_failed", "url": url, "error": str(exc), **settings.redacted()}
+
+    payload_preview: Any
+    try:
+        payload_preview = response.json()
+    except ValueError:
+        payload_preview = response.text[:1000]
+
+    return {
+        "status": "ok" if response.is_success else "provider_error",
+        "http_status": response.status_code,
+        "url": url,
+        "runtime": settings.redacted(),
+        "provider_response": payload_preview,
+    }
+
+
 class QwenCloudClient:
     def __init__(self, settings: QwenSettings):
         self.settings = settings
