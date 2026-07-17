@@ -1,4 +1,9 @@
 #!/usr/bin/env bash
+# ==============================================================================
+# ALIBABA CLOUD ECS DEPLOYMENT MANIFEST
+# Target: Ubuntu 22.04 LTS / Alibaba Cloud Elastic Compute Service (ECS)
+# Infrastructure: Global AI Hackathon with Qwen Cloud
+# ==============================================================================
 set -euo pipefail
 
 APP_DIR="${APP_DIR:-/opt/signalreview-qwen}"
