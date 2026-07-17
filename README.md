@@ -14,6 +14,17 @@ This repository contains an isolated, public-safe implementation of the SignalRe
 | Reproducibility | `requirements.txt` uses exact `==` pins; local and ECS run instructions are documented below. |
 | Agent Society track | Statistician, Skeptic, Upside Scout, and Orchestrator execute as four sequential, contract-validated Qwen passes. |
 
+## Verified Alibaba Cloud environment
+
+The current deployment environment has been verified against an active Alibaba Cloud Model Studio workspace with:
+
+- region: Singapore;
+- service deployment scope: International;
+- workspace-scoped Model Studio API host;
+- active Qwen model deployments, including `qwen3-max` and other Qwen families available to the workspace.
+
+Workspace identifiers, API hosts, and credentials are deliberately not hardcoded in this public repository. The workspace-specific OpenAI-compatible API base URL is supplied at runtime through `QWEN_BASE_URL`.
+
 ## Runtime architecture
 
 ```text
@@ -81,9 +92,9 @@ Classifies every specialist claim exactly once as accepted, rejected, or unresol
 
 ## Qwen / Alibaba Cloud Model Studio integration
 
-The runtime uses the official OpenAI-compatible Qwen API contract exposed by Alibaba Cloud Model Studio. `QWEN_BASE_URL` must contain the official region-specific Model Studio base URL available to the deployment account; the application appends `/chat/completions` at runtime.
+The runtime uses the official OpenAI-compatible Qwen API contract exposed by Alibaba Cloud Model Studio. `QWEN_BASE_URL` must contain the official workspace-specific or region-specific Model Studio base URL available to the deployment account; the application appends `/chat/completions` at runtime.
 
-`SIGNALREVIEW_REASONING_PROVIDER` must be set to `qwen`. Recommended models for deployment: `qwen-plus` or `qwen2.5-72b-instruct` via Alibaba Cloud Model Studio.
+`SIGNALREVIEW_REASONING_PROVIDER` must be set to `qwen`. Recommended models for deployment include `qwen-plus`, `qwen2.5-72b-instruct`, or an enabled workspace deployment such as `qwen3-max` via Alibaba Cloud Model Studio.
 
 The model remains environment-configurable so judges can use the Qwen model enabled for their region, workspace, or hackathon entitlement without modifying source code.
 
