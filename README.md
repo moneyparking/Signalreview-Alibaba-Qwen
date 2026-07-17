@@ -14,16 +14,18 @@ This repository contains an isolated, public-safe implementation of the SignalRe
 | Reproducibility | `requirements.txt` uses exact `==` pins; local and ECS run instructions are documented below. |
 | Agent Society track | Statistician, Skeptic, Upside Scout, and Orchestrator execute as four sequential, contract-validated Qwen passes. |
 
-## Verified Alibaba Cloud environment
+## Verified Alibaba Cloud deployment evidence
 
-The current deployment environment has been verified against an active Alibaba Cloud Model Studio workspace with:
+The project was deployed and operationally verified on Alibaba Cloud infrastructure before the paid resources were intentionally stopped to prevent further cloud charges. The verified environment included:
 
-- region: Singapore;
-- service deployment scope: International;
-- workspace-scoped Model Studio API host;
-- active Qwen model deployments, including `qwen3-max` and other Qwen families available to the workspace.
+- Alibaba Cloud Elastic Compute Service in the Singapore region;
+- Ubuntu 22.04 LTS on an ECS instance;
+- public and private network interfaces with an attached security group;
+- Alibaba Cloud Model Studio with International service deployment scope;
+- a workspace-scoped OpenAI-compatible Model Studio API host;
+- enabled Qwen model deployments, including `qwen3-max` and other Qwen families available to the workspace.
 
-Workspace identifiers, API hosts, and credentials are deliberately not hardcoded in this public repository. The workspace-specific OpenAI-compatible API base URL is supplied at runtime through `QWEN_BASE_URL`.
+The stopped ECS state does not change reproducibility: `deploy.sh` recreates the documented service on a compatible Ubuntu 22.04 ECS host. Workspace identifiers, instance identifiers, IP addresses, API hosts, and credentials are deliberately not hardcoded in this public repository. The workspace-specific OpenAI-compatible API base URL is supplied at runtime through `QWEN_BASE_URL`.
 
 ## Runtime architecture
 
