@@ -2,25 +2,32 @@
 set -euo pipefail
 
 APP_DIR="${APP_DIR:-/opt/signalreview-qwen}"
-REPO_URL="${REPO_URL:-https://github.com/moneyparking/Signalreview-Alibaba-Qwen.git}"
+REPO_URL="${REPO_URL:?REPO_URL must be exported before deploy}"
 SERVICE_NAME="${SERVICE_NAME:-signalreview-qwen}"
 PORT="${PORT:-8000}"
 PYTHON_BIN="${PYTHON_BIN:-python3}"
-SERVER_PUBLIC_IP="${SERVER_PUBLIC_IP:-8.220.101.4}"
-QWEN_MODEL_VALUE="${QWEN_MODEL:-qwen2.5-72b-instruct}"
-QWEN_BASE_URL_VALUE="${QWEN_BASE_URL:-https://dashscope-intl.aliyuncs.com/compatible-mode/v1}"
-ALLOWED_ORIGINS_VALUE="${ALLOWED_ORIGINS:-*}"
+
+required_runtime_vars=(
+  QWEN_BASE_URL
+  QWEN_MODEL
+  QWEN_API_KEY
+  QWEN_TIMEOUT_MS
+  QWEN_TOTAL_TIMEOUT_MS
+  QWEN_MAX_REPAIR_ATTEMPTS
+  SIGNALREVIEW_REASONING_PROVIDER
+)
 
 if [[ "${EUID}" -ne 0 ]]; then
   echo "Run as root: sudo -E bash deploy.sh"
   exit 1
 fi
 
-if [[ -z "${DASHSCOPE_API_KEY:-}" ]]; then
-  echo "DASHSCOPE_API_KEY must be exported before deploy."
-  echo "Example: export DASHSCOPE_API_KEY='your_alibaba_dashscope_key'"
-  exit 1
-fi
+for variable_name in "${required_runtime_vars[@]}"; do
+  if [[ -z "${!variable_name:-}" ]]; then
+    echo "${variable_name} must be exported before deploy."
+    exit 1
+  fi
+done
 
 apt-get update
 apt-get install -y git python3 python3-venv python3-pip curl
@@ -40,13 +47,15 @@ source .venv/bin/activate
 pip install --upgrade pip
 pip install -r requirements.txt
 
+umask 077
 cat > "${APP_DIR}/.env" <<ENV
-DASHSCOPE_API_KEY=${DASHSCOPE_API_KEY}
-QWEN_MODEL=${QWEN_MODEL_VALUE}
-QWEN_BASE_URL=${QWEN_BASE_URL_VALUE}
-ALLOWED_ORIGINS=${ALLOWED_ORIGINS_VALUE}
-SIGNALREVIEW_ENV=hackathon
-PORT=${PORT}
+QWEN_BASE_URL=${QWEN_BASE_URL}
+QWEN_MODEL=${QWEN_MODEL}
+QWEN_API_KEY=${QWEN_API_KEY}
+QWEN_TIMEOUT_MS=${QWEN_TIMEOUT_MS}
+QWEN_TOTAL_TIMEOUT_MS=${QWEN_TOTAL_TIMEOUT_MS}
+QWEN_MAX_REPAIR_ATTEMPTS=${QWEN_MAX_REPAIR_ATTEMPTS}
+SIGNALREVIEW_REASONING_PROVIDER=${SIGNALREVIEW_REASONING_PROVIDER}
 ENV
 chmod 600 "${APP_DIR}/.env"
 
@@ -74,9 +83,8 @@ systemctl restart "${SERVICE_NAME}"
 
 sleep 2
 systemctl --no-pager --full status "${SERVICE_NAME}" || true
-curl -fsS "http://127.0.0.1:${PORT}/api/health" || true
+curl -fsS "http://127.0.0.1:${PORT}/api/health"
 
 echo "Deployment complete."
-echo "Local health:  http://127.0.0.1:${PORT}/api/health"
-echo "Public health: http://${SERVER_PUBLIC_IP}:${PORT}/api/health"
-echo "API docs:      http://${SERVER_PUBLIC_IP}:${PORT}/docs"
+echo "Local health: http://127.0.0.1:${PORT}/api/health"
+echo "API docs:     http://127.0.0.1:${PORT}/docs"

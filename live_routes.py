@@ -1,10 +1,16 @@
-"""FastAPI routes for the isolated SignalReview Alibaba Qwen hackathon demo."""
+"""FastAPI routes for the isolated SignalReview Alibaba Qwen hackathon runtime."""
 
 from __future__ import annotations
 
 from fastapi import APIRouter, HTTPException
 
-from live_match_processor import MatchContext, build_processor_from_env, qwen_models_probe, qwen_runtime_diagnostics
+from live_match_processor import (
+    MatchContext,
+    RuntimeConfigurationError,
+    build_processor_from_env,
+    qwen_models_probe,
+    qwen_runtime_diagnostics,
+)
 
 router = APIRouter(prefix="/api", tags=["qwen-live-review"])
 
@@ -34,5 +40,10 @@ async def review_live_match(context: MatchContext) -> dict:
         processor = build_processor_from_env()
         review = await processor.review_match(context)
         return review.model_dump()
-    except Exception as exc:  # noqa: BLE001 - API boundary returns sanitized error only.
-        raise HTTPException(status_code=502, detail=f"Qwen review failed: {exc}") from exc
+    except RuntimeConfigurationError as exc:
+        raise HTTPException(status_code=503, detail=str(exc)) from exc
+    except Exception as exc:  # noqa: BLE001 - public boundary deliberately suppresses provider internals.
+        raise HTTPException(
+            status_code=502,
+            detail="The Qwen review runtime could not complete the bounded public contract.",
+        ) from exc
