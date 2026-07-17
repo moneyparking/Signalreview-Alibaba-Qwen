@@ -4,6 +4,16 @@ Public hackathon runtime for the Global AI Hackathon Series with Qwen Cloud.
 
 This repository contains an isolated, public-safe implementation of the SignalReview four-agent debate core. It intentionally excludes the private commercial platform, including Supabase schemas and migrations, authentication/account code, billing/subscription integrations, private datasets, production calibration assets, and secrets.
 
+## Hackathon verification matrix
+
+| Judging requirement | Repository evidence |
+| --- | --- |
+| Open-source license | Root-level `LICENSE` contains the complete MIT License text. |
+| Alibaba Cloud deployment | `deploy.sh` is an explicit Alibaba Cloud ECS deployment manifest for Ubuntu 22.04 LTS and installs the API as a `systemd` service. |
+| Qwen model usage | `live_match_processor.py` calls the configured Alibaba Cloud Model Studio OpenAI-compatible `/chat/completions` API with `QWEN_MODEL` and `QWEN_API_KEY`. |
+| Reproducibility | `requirements.txt` uses exact `==` pins; local and ECS run instructions are documented below. |
+| Agent Society track | Statistician, Skeptic, Upside Scout, and Orchestrator execute as four sequential, contract-validated Qwen passes. |
+
 ## Runtime architecture
 
 ```text
@@ -62,11 +72,20 @@ Classifies every specialist claim exactly once as accepted, rejected, or unresol
 ├── live_match_processor.py   # four sequential Qwen agents and validators
 ├── live_routes.py            # FastAPI routes
 ├── main.py                   # FastAPI application
-├── deploy.sh                 # environment-driven ECS deployment
-├── requirements.txt
+├── deploy.sh                 # Alibaba Cloud ECS deployment manifest
+├── requirements.txt          # exact-version runtime dependencies
 ├── .env.example              # empty Vercel/Qwen variable names only
+├── LICENSE                   # MIT License
 └── README.md
 ```
+
+## Qwen / Alibaba Cloud Model Studio integration
+
+The runtime uses the official OpenAI-compatible Qwen API contract exposed by Alibaba Cloud Model Studio. `QWEN_BASE_URL` must contain the official region-specific Model Studio base URL available to the deployment account; the application appends `/chat/completions` at runtime.
+
+`SIGNALREVIEW_REASONING_PROVIDER` must be set to `qwen`. Recommended models for deployment: `qwen-plus` or `qwen2.5-72b-instruct` via Alibaba Cloud Model Studio.
+
+The model remains environment-configurable so judges can use the Qwen model enabled for their region, workspace, or hackathon entitlement without modifying source code.
 
 ## Environment
 
@@ -88,13 +107,14 @@ QWEN_MAX_REPAIR_ATTEMPTS
 SIGNALREVIEW_REASONING_PROVIDER
 ```
 
-`SIGNALREVIEW_REASONING_PROVIDER` must be set to `qwen` for the live four-agent path.
-
 ## Local run
+
+Python 3.11 or later is recommended. Runtime dependencies are exact-version pinned in `requirements.txt` for reproducible automated builds.
 
 ```bash
 python3 -m venv .venv
 source .venv/bin/activate
+pip install --upgrade pip
 pip install -r requirements.txt
 uvicorn main:app --host 0.0.0.0 --port 8000 --reload
 ```
@@ -146,15 +166,25 @@ curl -X POST http://127.0.0.1:8000/api/review-live-match \
   }'
 ```
 
-## Deployment
+## Alibaba Cloud ECS deployment
 
-Export all seven required runtime variables and `REPO_URL` through the host secret mechanism, then run:
+`deploy.sh` targets Ubuntu 22.04 LTS on Alibaba Cloud Elastic Compute Service. Export all seven required runtime variables and `REPO_URL` through the host secret mechanism, then run:
 
 ```bash
 sudo -E bash deploy.sh
 ```
 
-The deployment script refuses to create the service when any required runtime variable is absent. It writes the runtime `.env` with restrictive permissions and does not include embedded Qwen endpoint, model, timeout, repair-limit, or secret defaults.
+The deployment script:
+
+1. validates every required Qwen runtime variable;
+2. installs Git, Python, venv, pip, and curl;
+3. clones or updates the public repository;
+4. installs exact-version Python dependencies;
+5. writes a permission-restricted runtime `.env`;
+6. creates and starts a `systemd` service;
+7. verifies `/api/health` locally.
+
+The script refuses to create the service when any required runtime variable is absent. It contains no embedded Qwen endpoint, model, timeout, repair-limit, API key, or production hostname.
 
 ## Security boundary
 
@@ -165,5 +195,9 @@ The public repository must never contain:
 - WayForPay, crypto billing, subscription, entitlement, or webhook code;
 - private API keys, database URLs, access tokens, or production hostnames;
 - proprietary commercial datasets, sealed packs, private calibration tables, or production artifact pipelines.
+
+## License
+
+Released under the MIT License. See the root-level `LICENSE` file.
 
 SignalReview provides structured sports intelligence and transparent reasoning. It does not provide betting predictions, gambling advice, bookmaker recommendations, staking instructions, certainty, guarantees, or financial advice.
