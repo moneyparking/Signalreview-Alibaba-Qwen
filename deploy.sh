@@ -20,6 +20,7 @@ required_runtime_vars=(
   QWEN_TOTAL_TIMEOUT_MS
   QWEN_MAX_REPAIR_ATTEMPTS
   SIGNALREVIEW_REASONING_PROVIDER
+  API_FOOTBALL_KEY
 )
 
 if [[ "${EUID}" -ne 0 ]]; then
@@ -33,6 +34,12 @@ for variable_name in "${required_runtime_vars[@]}"; do
     exit 1
   fi
 done
+
+API_FOOTBALL_BASE_URL="${API_FOOTBALL_BASE_URL:-https://v3.football.api-sports.io}"
+API_FOOTBALL_DAILY_BUDGET="${API_FOOTBALL_DAILY_BUDGET:-80}"
+API_FOOTBALL_CACHE_TTL_SECONDS="${API_FOOTBALL_CACHE_TTL_SECONDS:-900}"
+API_FOOTBALL_TIMEOUT_MS="${API_FOOTBALL_TIMEOUT_MS:-8000}"
+ALLOWED_ORIGINS="${ALLOWED_ORIGINS:-https://signalreview.co}"
 
 apt-get update
 apt-get install -y git python3 python3-venv python3-pip curl
@@ -61,6 +68,12 @@ QWEN_TIMEOUT_MS=${QWEN_TIMEOUT_MS}
 QWEN_TOTAL_TIMEOUT_MS=${QWEN_TOTAL_TIMEOUT_MS}
 QWEN_MAX_REPAIR_ATTEMPTS=${QWEN_MAX_REPAIR_ATTEMPTS}
 SIGNALREVIEW_REASONING_PROVIDER=${SIGNALREVIEW_REASONING_PROVIDER}
+API_FOOTBALL_KEY=${API_FOOTBALL_KEY}
+API_FOOTBALL_BASE_URL=${API_FOOTBALL_BASE_URL}
+API_FOOTBALL_DAILY_BUDGET=${API_FOOTBALL_DAILY_BUDGET}
+API_FOOTBALL_CACHE_TTL_SECONDS=${API_FOOTBALL_CACHE_TTL_SECONDS}
+API_FOOTBALL_TIMEOUT_MS=${API_FOOTBALL_TIMEOUT_MS}
+ALLOWED_ORIGINS=${ALLOWED_ORIGINS}
 ENV
 chmod 600 "${APP_DIR}/.env"
 
@@ -89,7 +102,10 @@ systemctl restart "${SERVICE_NAME}"
 sleep 2
 systemctl --no-pager --full status "${SERVICE_NAME}" || true
 curl -fsS "http://127.0.0.1:${PORT}/api/health"
+curl -fsS "http://127.0.0.1:${PORT}/api/provider-health"
 
 echo "Deployment complete."
-echo "Local health: http://127.0.0.1:${PORT}/api/health"
-echo "API docs:     http://127.0.0.1:${PORT}/docs"
+echo "Local health:    http://127.0.0.1:${PORT}/api/health"
+echo "Provider health: http://127.0.0.1:${PORT}/api/provider-health"
+echo "Judge fixtures:  http://127.0.0.1:${PORT}/api/judge-fixtures"
+echo "API docs:        http://127.0.0.1:${PORT}/docs"

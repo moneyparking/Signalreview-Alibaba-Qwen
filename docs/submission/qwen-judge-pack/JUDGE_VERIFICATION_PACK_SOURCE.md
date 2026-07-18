@@ -1,14 +1,12 @@
 # SignalReview Qwen Judge Verification Pack - Source
 
 **Document:** `SignalReview_Qwen_Judge_Verification_Pack.pdf`  
-**Version:** 1.0  
-**Verification date:** 2026-07-18  
-**Issued timestamp used on the pack:** 2026-07-15 18:26:00 UTC  
+**Source version:** 1.1  
 **Track:** Track 3 - Agent Society
 
 ## Executive verification statement
 
-SignalReview converts fragmented sports-evidence signals into a structured adversarial multi-agent review while preserving provenance, missing-data visibility, and responsible decision support. The public hackathon repository isolates the Qwen Agent Society from the private commercial platform.
+SignalReview converts fragmented sports-evidence signals into a structured adversarial Qwen Agent Society review while preserving provenance, missing-data visibility, and responsible decision support. The public hackathon backend is isolated from the private commercial platform and is deployable on Alibaba Cloud ECS.
 
 ## Judge links
 
@@ -20,63 +18,70 @@ SignalReview converts fragmented sports-evidence signals into a structured adver
 - Alibaba ECS deployment manifest: https://github.com/moneyparking/Signalreview-Alibaba-Qwen/blob/main/deploy.sh
 - MIT License: https://github.com/moneyparking/Signalreview-Alibaba-Qwen/blob/main/LICENSE
 
-## Current truth and evidence mapping
+## Current architecture and evidence mapping
 
-| Claim | Verified owner | Evidence |
+| Claim | Owner | Evidence |
 | --- | --- | --- |
-| Public open-source project | GitHub | Public repository, root MIT License |
-| Alibaba deployment path | GitHub + supplied console screenshots | `deploy.sh`; redacted ECS evidence from Germany (Frankfurt) |
-| Current isolated data plane | Source code | `forensic_data_broker.py`, `live_match_processor.py`, `live_routes.py` |
-| Qwen role | Source code | Four sequential OpenAI-compatible `/chat/completions` calls, server-side configuration |
-| Missing-data boundary | Source code + public UI | Missing domains reduce confidence; current demo shows unavailable states |
-| Working demo evidence | Uploaded control frames | 1920x1080 frames through 01:39; fresh remote Qwen call not independently replayed in this session |
+| Public open-source project | GitHub | Public repository and root MIT License |
+| Alibaba deployment path | GitHub + console evidence | `deploy.sh`; redacted ECS evidence from Germany (Frankfurt) |
+| Live provider adapter | Source code | `api_football_provider.py`, `/api/provider-health`, `/api/judge-fixtures` |
+| Deterministic evidence and quant | Source code | `api_football_provider.py`, `forensic_data_broker.py` |
+| Qwen Agent Society | Source code | `live_match_processor.py`, four sequential `/chat/completions` passes |
+| Missing-data boundary | Source and UI | Unavailable domains remain visible and reduce the confidence ceiling |
 
-## Active data sources and states
+## Active data plane
 
-1. **Request-supplied provider snapshot and recent form** - treated as observed input only when present. The isolated public runtime does not fetch a provider.
-2. **Request-supplied deterministic quant context** - calculated upstream; Qwen may interpret but may not create or alter metrics.
-3. **Golden Dataset** - non-live calibration context only. It cannot be described as live fixture truth or outcome accuracy.
-4. **Qualitative news context** - request-supplied labels only; no invented injuries or private news.
-5. **Content-addressed in-process cache** - reuses equivalent packets and performs zero provider network calls.
-6. **API-Football** - disabled and not used by the isolated public Qwen request path.
+1. **API-Football live provider adapter** - server-side only. The key never reaches the browser.
+2. **Quota budget and cache** - default application budget is 80 provider calls per UTC day with a 15-minute process cache. One uncached provider-backed review uses four bounded calls.
+3. **Observed fixture evidence** - fixture identity, recent form, and H2H are provider observations.
+4. **Deterministic quant context** - lambda, 1/X/2, O2.5, BTTS, evidence completeness, and confidence are calculated before Qwen. They are model estimates, not provider facts.
+5. **Missing domains** - official lineups, external market reference, verified injuries, and private news remain unavailable unless actually supplied.
+6. **Qwen role** - Qwen interprets the evidence packet and resolves disagreement. It cannot create provider facts or deterministic metrics.
+7. **Request-supplied path** - remains available for reproducible adversarial and incomplete-evidence tests.
+8. **Golden Dataset** - non-live calibration only; never live fixture truth or outcome accuracy.
 
 ## Four-agent contract
 
-- **Statistician:** three exact evidence-bound claims.
-- **Skeptic:** K1/K2/K3 directly challenge S1/S2/S3 through shared evidence references.
-- **Upside Scout:** primary scenario, alternate scenario, and observable invalidation.
-- **Orchestrator:** classifies every specialist claim exactly once as accepted, rejected, or unresolved; publishes confidence band and risk flags.
+- **Statistician:** evidence-bound claims using exact structured values.
+- **Skeptic:** direct challenges through shared evidence rows.
+- **Upside Scout:** primary scenario, alternate scenario, triggers, and invalidation.
+- **Orchestrator:** accepted / rejected / unresolved classification, confidence ceiling, risk flags, and final responsible-use verdict.
 
-Qwen interprets supplied evidence and resolves disagreement. Deterministic code owns evidence rows, numeric values, missing-data state, contract validation, and safe recovery.
+## Required judge tests after deployment
 
-## Judge walkthrough record
+### Test A - live supported fixture
 
-**Public URL tested:** https://signalreview.co/dashboard/demo  
-**Verification date:** 2026-07-18  
-**Reference video viewport:** 1920x1080  
-**Workflow:** public demo -> Match Board -> AI Debate -> evidence / missing states -> Orchestrator verdict.
+1. Open `https://signalreview.co/dashboard/demo` without login.
+2. Confirm the selected row is labelled `API-Football live provider` or equivalent.
+3. Click `Run Qwen Agent Society` / `ENGAGE`.
+4. Confirm four distinct agent outputs appear.
+5. Confirm the response identifies Alibaba Cloud ECS and Qwen reasoning.
+6. Confirm provider evidence, deterministic estimates, and missing domains remain separately labelled.
 
-### Test A - supported scenario
+### Test B - incomplete evidence
 
-- Public UI loaded without login: **PASS**.
-- Statistician, Skeptic, Upside Scout and Orchestrator visibly differentiated: **PASS**.
-- Captured Qwen hackathon walkthrough reaches Broker, Evidence and Verdict panels: **PASS (captured evidence)**.
-- Fresh Qwen network execution from the isolated public API: **UNAVAILABLE** because the Alibaba ECS resource is stopped and no current public API endpoint was exposed for this verification session.
-- Agent text remains responsible-use framed and avoids certainty claims: **PASS**.
+1. Select the controlled incomplete-evidence scenario or a live fixture without lineups/market evidence.
+2. Run the review.
+3. Confirm confidence is constrained, unresolved disagreement remains visible, and no missing fact is filled.
 
-### Test B - incomplete/conflicting evidence
+## Deployment verification requirements
 
-The current public demo visibly reports Quant Layer `Unavailable`, provider evidence missing, market and lineup evidence unavailable, and unknown freshness states. Agent text preserves those limits. **PASS for visible missing-data behavior; Qwen network execution unavailable.**
+The final submission evidence must show:
 
-## Material submission mismatch found
+- ECS is running and `/api/health` returns `ok`;
+- `/api/qwen-health` is configured;
+- `/api/qwen-models` can see the configured Qwen model;
+- `/api/provider-health` is configured without exposing the key;
+- `/api/judge-fixtures` returns current provider fixture rows;
+- `/api/review-provider-fixture` returns the complete four-agent contract;
+- the public UI completes the same workflow in incognito.
 
-The current Devpost description still states that the broker sits between live providers `(API-Football)` and the runtime and names a fixed Singapore/qwen-plus deployment. Captured video-era UI frames also contain legacy API-Football source labels. Current public source proves a different boundary: request-supplied inputs, zero provider network calls, environment-configured Qwen model, and supplied deployment evidence from Germany (Frankfurt).
-
-Apply `DEVPOST_COPY_PATCH.md` before the deadline and disclose that video-era API-Football labels are historical presentation evidence, not the current isolated request path.
+Do not mark these runtime checks PASS until they are executed against the deployed judge environment.
 
 ## Update instructions
 
-1. Regenerate redacted screenshots from the original private captures; never commit originals.
-2. Re-run the PDF generator and QA commands documented in the repository PR.
-3. Replace the PDF and update its SHA-256.
-4. Keep current source and Devpost description synchronized; do not reintroduce API-Football as an active isolated-runtime source.
+1. Start or redeploy the Alibaba ECS backend with server-side Qwen and API-Football variables.
+2. Configure the SignalReview web deployment with the server-only ECS base URL.
+3. Run both judge tests in desktop and mobile viewports.
+4. Regenerate the Judge Verification Pack PDF from the verified runtime evidence.
+5. Update Devpost copy so API-Football is described as an active server-side adapter and deterministic estimates are not described as provider facts.

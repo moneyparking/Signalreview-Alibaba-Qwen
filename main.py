@@ -21,8 +21,8 @@ def allowed_origins() -> List[str]:
 
 app = FastAPI(
     title="SignalReview Alibaba Qwen Hackathon API",
-    description="Isolated open-source Qwen Cloud agent demo.",
-    version="0.1.0",
+    description="Isolated open-source Qwen Cloud Agent Society with a quota-safe API-Football evidence adapter.",
+    version="0.2.0",
 )
 
 app.add_middleware(
@@ -43,5 +43,8 @@ async def root() -> dict[str, str]:
         "status": "ok",
         "docs": "/docs",
         "health": "/api/health",
+        "provider_health": "/api/provider-health",
+        "judge_fixtures": "/api/judge-fixtures",
         "review_endpoint": "/api/review-live-match",
+        "provider_review_endpoint": "/api/review-provider-fixture",
     }

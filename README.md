@@ -1,124 +1,107 @@
 # SignalReview AI — Secure Qwen Agent Society
 
-Public hackathon runtime for the Global AI Hackathon Series with Qwen Cloud.
+Public hackathon runtime for the **Global AI Hackathon Series with Qwen Cloud**.
 
-This repository contains an isolated, public-safe implementation of the SignalReview four-agent debate core. It intentionally excludes the private commercial platform, including Supabase schemas and migrations, authentication/account code, billing/subscription integrations, private datasets, production calibration assets, and secrets.
+This repository contains the isolated, public-safe backend for the SignalReview judge workflow. `deploy.sh` deploys it to Alibaba Cloud ECS, where it can hydrate a bounded evidence packet from API-Football, compute deterministic match context before model inference, and execute four sequential Qwen passes:
+
+`Statistician → Skeptic → Upside Scout → Orchestrator`
+
+The repository intentionally excludes Supabase schemas, authentication, billing, private commercial datasets, production calibration assets, and secrets. Repository readiness is not treated as live deployment proof: the judge environment must also pass the documented ECS, Qwen, provider, and public-UI health checks.
 
 ## Hackathon verification matrix
 
-| Judging requirement | Repository evidence |
+| Requirement | Repository evidence |
 | --- | --- |
-| Open-source license | Root-level `LICENSE` contains the complete MIT License text. |
-| Alibaba Cloud deployment | `deploy.sh` is an explicit Alibaba Cloud ECS deployment manifest for Ubuntu 22.04 LTS and installs the API as a `systemd` service. |
-| Qwen model usage | `live_match_processor.py` calls the configured Alibaba Cloud Model Studio OpenAI-compatible `/chat/completions` API with `QWEN_MODEL` and `QWEN_API_KEY`. |
-| Reproducibility | `requirements.txt` uses exact `==` pins; local and ECS run instructions are documented below. |
-| Agent Society track | Statistician, Skeptic, Upside Scout, and Orchestrator execute as four sequential, contract-validated Qwen passes. |
-| Judge verification source | `docs/submission/qwen-judge-pack/` maps current source, data states, deployment evidence, judge checks, and Devpost corrections. |
-
-## Judge verification pack
-
-- [`JUDGE_VERIFICATION_PACK_SOURCE.md`](docs/submission/qwen-judge-pack/JUDGE_VERIFICATION_PACK_SOURCE.md) — source text and evidence mapping.
-- [`JUDGE_CHECKLIST.md`](docs/submission/qwen-judge-pack/JUDGE_CHECKLIST.md) — final operator checklist.
-- [`DEVPOST_COPY_PATCH.md`](docs/submission/qwen-judge-pack/DEVPOST_COPY_PATCH.md) — exact replacement copy for current submission mismatches.
-
-The final PDF is generated as a submission artifact and uploaded manually to Devpost Additional info. It is intentionally not required for runtime installation.
-
-## Verified Alibaba Cloud deployment evidence
-
-The project was deployed and operationally verified on Alibaba Cloud infrastructure before the paid resources were intentionally stopped to prevent further cloud charges. The verified environment included:
-
-- Alibaba Cloud Elastic Compute Service in the Germany (Frankfurt) region;
-- Ubuntu 22.04 LTS on an ECS instance;
-- public and private network interfaces with an attached security group;
-- Alibaba Cloud Model Studio with an OpenAI-compatible API host supplied at runtime;
-- a server-side, environment-selected Qwen model deployment.
-
-The stopped ECS state does not change reproducibility: `deploy.sh` recreates the documented service on a compatible Ubuntu 22.04 ECS host. Workspace identifiers, instance identifiers, IP addresses, API hosts, model identifiers, and credentials are deliberately not hardcoded in this public repository. The workspace-specific OpenAI-compatible API base URL and selected model are supplied at runtime through `QWEN_BASE_URL` and `QWEN_MODEL`.
+| Open-source license | Root `LICENSE` contains the MIT License. |
+| Alibaba Cloud deployment | `deploy.sh` installs the FastAPI backend as a `systemd` service on Ubuntu 22.04 ECS. |
+| Qwen Cloud usage | `live_match_processor.py` calls the configured Model Studio OpenAI-compatible `/chat/completions` endpoint. |
+| Agent Society | Four sequential, role-specific Qwen passes with contract validation and deterministic recovery. |
+| Live sports evidence | `api_football_provider.py` provides a quota-safe server-side API-Football adapter. |
+| Architecture and judge evidence | `docs/submission/qwen-judge-pack/` and the repository source. |
 
 ## Runtime architecture
 
 ```text
-request payload
-  -> forensic_data_broker.py
-     -> request-supplied provider adapter
-     -> deterministic quant-context adapter
-     -> non-live Golden Dataset adapter
-     -> qualitative news-context adapter
-     -> content-addressed process cache
-  -> Statistician Qwen pass
-  -> Skeptic Qwen pass
-  -> Upside Scout Qwen pass
-  -> Orchestrator Qwen pass
-  -> validated dashboard-ready JSON
+SignalReview judge UI
+  → Alibaba Cloud ECS / FastAPI
+    → API-Football adapter
+       - server-only key
+       - current fixture inventory
+       - recent form and H2H observations
+       - process cache
+       - daily request budget
+    → deterministic quant adapter
+       - lambda estimates
+       - 1/X/2 distribution
+       - O2.5 and BTTS estimates
+       - evidence-completeness discount
+    → forensic evidence broker
+       - observed provider rows
+       - deterministic-derived rows
+       - explicit missing domains
+    → Statistician Qwen pass
+    → Skeptic Qwen pass
+    → Upside Scout Qwen pass
+    → Orchestrator Qwen pass
+    → validated dashboard-ready JSON
 ```
 
-The broker performs **zero external provider calls** in the request path. Repeated equivalent payloads reuse a content-addressed in-process cache, preventing duplicate provider fan-out and preserving quota discipline.
+## Data and safety boundaries
 
-**API-Football is disabled and is not an active source in this isolated public runtime.** Provider observations are supplied in the request. The model cannot invent or fetch missing provider facts.
+- API-Football facts are fetched only by the ECS backend; the API key is never sent to the browser.
+- The adapter reserves quota through `API_FOOTBALL_DAILY_BUDGET` and caches equivalent requests.
+- One uncached provider review uses four bounded calls: fixture identity, recent home form, recent away form, and H2H.
+- Missing lineups, market references, injuries, news, or provider fields remain explicitly unavailable.
+- Lambda, 1/X/2, O2.5, BTTS, and confidence are deterministic model estimates, not provider facts.
+- Qwen interprets the evidence packet and resolves disagreement. It cannot create provider facts or deterministic metrics.
+- Golden Dataset fields, when supplied, are non-live calibration only.
+- No certainty, guaranteed outcome, ROI, accuracy, bookmaker, staking, or gambling instructions are produced.
+- Invalid Qwen output triggers deterministic contract-safe recovery.
 
 ## Agent contract
 
 ### Statistician
 
-Publishes three evidence-bound claims. Every number must exactly match a structured evidence row attached through `refs`.
+Publishes evidence-bound claims and may use only values present in structured refs.
 
 ### Skeptic
 
-Publishes three paired challenges:
-
-- `K1` challenges `S1` through the same evidence ref;
-- `K2` challenges `S2` through the same evidence ref;
-- `K3` challenges `S3` through the same evidence ref.
+Challenges the Statistician through the same evidence rows and preserves unresolved gaps.
 
 ### Upside Scout
 
-Separates the primary scenario, alternate scenario, and observable invalidation without converting inference into certainty.
+Separates a primary scenario, alternate scenario, observable triggers, and invalidation conditions.
 
 ### Orchestrator
 
-Classifies every specialist claim exactly once as accepted, rejected, or unresolved, preserves missing-data constraints, and produces the final confidence band and risk flags.
-
-## Trust and publication rules
-
-- Raw evidence refs are permitted only inside structured `refs` arrays.
-- Raw refs and claim IDs are forbidden in customer-facing debate text.
-- Golden Dataset fields are non-live calibration context only.
-- Missing evidence can only constrain confidence.
-- The model cannot invent odds, injuries, line movement, private news, ROI, accuracy, lambdas, or outcomes.
-- Gambling, certainty, bookmaker, staking, and guaranteed-outcome language is rejected.
-- Invalid Qwen output triggers deterministic contract-safe recovery.
+Classifies specialist claims as accepted, rejected, or unresolved, applies the evidence ceiling, and publishes the final risk and confidence band.
 
 ## Files
 
 ```text
 .
-├── forensic_data_broker.py   # quota-safe request adapters and evidence cache
-├── live_match_processor.py   # four sequential Qwen agents and validators
-├── live_routes.py            # FastAPI routes
-├── main.py                   # FastAPI application
-├── deploy.sh                 # Alibaba Cloud ECS deployment manifest
-├── requirements.txt          # exact-version runtime dependencies
-├── .env.example              # empty Vercel/Qwen variable names only
-├── LICENSE                   # MIT License
-├── docs/submission/qwen-judge-pack/
-└── README.md
+├── api_football_provider.py       # live provider adapter, quota budget, cache, deterministic quant
+├── forensic_data_broker.py        # evidence normalization and provenance
+├── live_match_processor.py        # four Qwen agents and validators
+├── live_routes.py                 # FastAPI routes
+├── main.py                        # FastAPI application
+├── deploy.sh                      # Alibaba Cloud ECS deployment manifest
+├── requirements.txt               # exact-version dependencies
+├── tests/                         # provider/runtime contract tests
+├── .env.example                   # names and non-secret defaults only
+├── LICENSE                        # MIT License
+└── docs/submission/qwen-judge-pack/
 ```
-
-## Qwen / Alibaba Cloud Model Studio integration
-
-The runtime uses the official OpenAI-compatible Qwen API contract exposed by Alibaba Cloud Model Studio. `QWEN_BASE_URL` must contain the official workspace-specific or region-specific Model Studio base URL available to the deployment account; the application appends `/chat/completions` at runtime.
-
-`SIGNALREVIEW_REASONING_PROVIDER` must be set to `qwen`. The model remains environment-configurable through `QWEN_MODEL` so judges can use the Qwen deployment enabled for their region, workspace, or hackathon entitlement without modifying source code.
 
 ## Environment
 
-Copy the template and provide values through the deployment secret store. The repository does not contain model, endpoint, timeout, repair-limit, or key defaults.
+Copy the template and set values through the ECS host secret mechanism:
 
 ```bash
 cp .env.example .env
 ```
 
-Required variables:
+Required Qwen variables:
 
 ```text
 QWEN_BASE_URL
@@ -127,12 +110,30 @@ QWEN_API_KEY
 QWEN_TIMEOUT_MS
 QWEN_TOTAL_TIMEOUT_MS
 QWEN_MAX_REPAIR_ATTEMPTS
-SIGNALREVIEW_REASONING_PROVIDER
+SIGNALREVIEW_REASONING_PROVIDER=qwen
 ```
+
+Required live provider variable:
+
+```text
+API_FOOTBALL_KEY
+```
+
+Quota-safe defaults:
+
+```text
+API_FOOTBALL_BASE_URL=https://v3.football.api-sports.io
+API_FOOTBALL_DAILY_BUDGET=80
+API_FOOTBALL_CACHE_TTL_SECONDS=900
+API_FOOTBALL_TIMEOUT_MS=8000
+ALLOWED_ORIGINS=https://signalreview.co
+```
+
+The runtime budget is intentionally below the API-Football free-plan daily ceiling, leaving reserve capacity for health and manual verification.
 
 ## Local run
 
-Python 3.11 or later is recommended. Runtime dependencies are exact-version pinned in `requirements.txt` for reproducible automated builds.
+Python 3.11 or later is recommended.
 
 ```bash
 python3 -m venv .venv
@@ -144,29 +145,46 @@ uvicorn main:app --host 0.0.0.0 --port 8000 --reload
 
 ## API
 
-### Health
+### Backend health
 
 ```bash
 curl http://127.0.0.1:8000/api/health
 ```
 
-### Redacted Qwen configuration health
+### Redacted Qwen readiness
 
 ```bash
 curl http://127.0.0.1:8000/api/qwen-health
-```
-
-The response reports only whether required fields are configured. It does not expose an API key prefix, endpoint, model name, or provider response body.
-
-### Model entitlement probe
-
-```bash
 curl http://127.0.0.1:8000/api/qwen-models
 ```
 
-The response reports only status, HTTP status, model visibility, and visible model count.
+### Redacted provider readiness
 
-### Four-agent review
+```bash
+curl http://127.0.0.1:8000/api/provider-health
+```
+
+The response reports configuration, process request count, cache size, and provider remaining quota when available. It never returns the key.
+
+### Current judge fixtures
+
+```bash
+curl 'http://127.0.0.1:8000/api/judge-fixtures?days=3&limit=6'
+```
+
+### Provider-backed four-agent review
+
+```bash
+curl -X POST http://127.0.0.1:8000/api/review-provider-fixture \
+  -H 'Content-Type: application/json' \
+  -d '{"fixture_id": 123456}'
+```
+
+The endpoint fetches observed provider evidence, computes deterministic estimates, then runs the four Qwen agents.
+
+### Request-supplied four-agent review
+
+The original controlled path remains available for reproducible missing-data and adversarial tests:
 
 ```bash
 curl -X POST http://127.0.0.1:8000/api/review-live-match \
@@ -175,52 +193,40 @@ curl -X POST http://127.0.0.1:8000/api/review-live-match \
     "match_id": "public-demo",
     "home_team": "Home Team",
     "away_team": "Away Team",
-    "provider_snapshot": {
-      "home_shots": 11,
-      "away_shots": 8
-    },
-    "quant_context": {
-      "home_control_index": 0.61,
-      "away_control_index": 0.39
-    },
-    "golden_dataset": {
-      "evidence_convergence": 0.74
-    }
+    "provider_snapshot": {"home_shots": 11, "away_shots": 8},
+    "quant_context": {"home_control_index": 0.61, "away_control_index": 0.39}
   }'
 ```
 
 ## Alibaba Cloud ECS deployment
 
-`deploy.sh` targets Ubuntu 22.04 LTS on Alibaba Cloud Elastic Compute Service. Export all seven required runtime variables and `REPO_URL` through the host secret mechanism, then run:
+Export the required Qwen and API-Football variables, `REPO_URL`, and optionally the quota/cache settings, then run:
 
 ```bash
 sudo -E bash deploy.sh
 ```
 
-The deployment script:
+The script:
 
-1. validates every required Qwen runtime variable;
-2. installs Git, Python, venv, pip, and curl;
+1. validates required server-only variables;
+2. installs the runtime dependencies;
 3. clones or updates the public repository;
-4. installs exact-version Python dependencies;
-5. writes a permission-restricted runtime `.env`;
-6. creates and starts a `systemd` service;
-7. verifies `/api/health` locally.
+4. writes a permission-restricted `.env`;
+5. creates and starts a `systemd` service;
+6. verifies backend and provider health locally.
 
-The script refuses to create the service when any required runtime variable is absent. It contains no embedded Qwen endpoint, model, timeout, repair-limit, API key, or production hostname.
+No endpoint, model identifier, API key, production hostname, instance identifier, or account identifier is committed.
 
-## Security boundary
+## Judge verification pack
 
-The public repository must never contain:
+- [`JUDGE_VERIFICATION_PACK_SOURCE.md`](docs/submission/qwen-judge-pack/JUDGE_VERIFICATION_PACK_SOURCE.md)
+- [`JUDGE_CHECKLIST.md`](docs/submission/qwen-judge-pack/JUDGE_CHECKLIST.md)
+- [`DEVPOST_COPY_PATCH.md`](docs/submission/qwen-judge-pack/DEVPOST_COPY_PATCH.md)
 
-- Supabase migrations, schemas, URLs, anon keys, or service-role keys;
-- authentication, profile, watchlist persistence, or account screens;
-- WayForPay, crypto billing, subscription, entitlement, or webhook code;
-- private API keys, database URLs, access tokens, or production hostnames;
-- proprietary commercial datasets, sealed packs, private calibration tables, or production artifact pipelines.
+The final PDF is uploaded separately to Devpost Additional info.
 
 ## License
 
-Released under the MIT License. See the root-level `LICENSE` file.
+Released under the MIT License.
 
 SignalReview provides structured sports intelligence and transparent reasoning. It does not provide betting predictions, gambling advice, bookmaker recommendations, staking instructions, certainty, guarantees, or financial advice.
