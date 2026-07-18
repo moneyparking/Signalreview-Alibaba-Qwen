@@ -90,13 +90,38 @@ async def review_provider_fixture(request: ProviderFixtureRequest) -> dict:
         processor = build_processor_from_env()
         review = await processor.review_match(context)
         payload = review.model_dump()
+        provenance = context_payload.get("provider_provenance", {})
         payload["provider_runtime"] = {
             "provider": "api-football",
             "source_classification": "live_provider",
             "fixture_id": request.fixture_id,
             "provider_facts_created_by_qwen": False,
             "deterministic_quant_created_before_qwen": True,
+            "observed_domains": provenance.get("observed_domains", []),
+            "missing_domains": provenance.get("missing_domains", []),
         }
+        payload["provider_evidence"] = {
+            "source": "api-football",
+            "source_classification": "live_provider",
+            "fixture": {
+                "fixture_id": request.fixture_id,
+                "home_team": context_payload.get("home_team"),
+                "away_team": context_payload.get("away_team"),
+                "competition": context_payload.get("competition"),
+                "kickoff_utc": context_payload.get("kickoff_utc"),
+            },
+            "recent_form": context_payload.get("recent_form", {}),
+            "availability": {
+                "fixture": "available",
+                "recent_form": "available",
+                "h2h": "available",
+                "lineups": "unavailable",
+                "market": "unavailable",
+                "injuries": "unavailable",
+                "news": "unavailable",
+            },
+        }
+        payload["quant_context"] = context_payload.get("quant_context", {})
         return payload
     except ApiFootballConfigurationError as exc:
         raise HTTPException(status_code=503, detail=str(exc)) from exc
