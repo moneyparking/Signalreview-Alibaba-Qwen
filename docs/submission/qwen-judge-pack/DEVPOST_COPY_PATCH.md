@@ -23,6 +23,16 @@
 
 > ...orchestrated sequentially through the Alibaba Cloud Model Studio OpenAI-compatible API. The enabled Qwen model and endpoint are environment-configured and remain server-side. Supplied deployment evidence is for Alibaba Cloud ECS in Germany (Frankfurt); the paid ECS resource is currently stopped for cost containment.
 
+## Patch 3 - video-era source labels
+
+**Observed**
+
+Captured demo frames contain legacy API-Football source attribution from the earlier presentation layer.
+
+**Disclosure to add**
+
+> The recorded demo contains historical API-Football labels from the earlier UI presentation. The current isolated public Qwen runtime performs zero external provider calls; provider observations are request-supplied and API-Football is disabled in that request path.
+
 ## Recommended complete replacement description
 
 ## Inspiration
@@ -74,5 +84,5 @@ Public UI: https://signalreview.co/dashboard/demo
 Public repository: https://github.com/moneyparking/Signalreview-Alibaba-Qwen
 Demo video: https://youtu.be/3GKHrsXoqII
 
-The Alibaba Cloud ECS deployment used for verification is currently stopped for cost containment. Judges can reproduce the isolated FastAPI runtime with the exact pinned dependencies and `sudo -E bash deploy.sh` after supplying the documented server-side Qwen environment variables. No login or private commercial credentials are required for repository inspection. The current public UI demonstrates the four roles and honest missing-data states; the video demonstrates the Qwen hackathon workflow. API-Football is not used by the isolated public Qwen request path.
+The Alibaba Cloud ECS deployment used for verification is currently stopped for cost containment. Judges can reproduce the isolated FastAPI runtime with the exact pinned dependencies and `sudo -E bash deploy.sh` after supplying the documented server-side Qwen environment variables. No login or private commercial credentials are required for repository inspection. The current public UI demonstrates the four roles and honest missing-data states; the video demonstrates the Qwen hackathon workflow. The recorded demo contains historical API-Football labels from the earlier UI presentation. The current isolated public Qwen runtime performs zero external provider calls; provider observations are request-supplied and API-Football is disabled in that request path.
 ```

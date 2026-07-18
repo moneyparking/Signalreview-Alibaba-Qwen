@@ -25,6 +25,7 @@ Run immediately before final submission.
 - [ ] Video is public and playable in incognito: https://youtu.be/3GKHrsXoqII
 - [ ] Video duration is under 3 minutes (captured control frames end at 01:39).
 - [ ] Testing instructions disclose that Alibaba ECS is intentionally stopped for cost containment and provide local reproduction commands.
+- [ ] Description/testing instructions disclose that video-era API-Football labels are historical and not the current isolated request path.
 - [ ] No credentials, private hostnames, account IDs, instance IDs, public IPs or provider payloads appear in submission artifacts.
 
 ## Personal confirmations
