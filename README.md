@@ -2,11 +2,11 @@
 
 Public hackathon runtime for the **Global AI Hackathon Series with Qwen Cloud**.
 
-This repository contains the isolated, public-safe backend used by the SignalReview judge workflow. It runs on Alibaba Cloud ECS, hydrates a bounded evidence packet from API-Football when configured, computes deterministic match context before model inference, and executes four sequential Qwen passes:
+This repository contains the isolated, public-safe backend for the SignalReview judge workflow. `deploy.sh` deploys it to Alibaba Cloud ECS, where it can hydrate a bounded evidence packet from API-Football, compute deterministic match context before model inference, and execute four sequential Qwen passes:
 
 `Statistician → Skeptic → Upside Scout → Orchestrator`
 
-The repository intentionally excludes Supabase schemas, authentication, billing, private commercial datasets, production calibration assets, and secrets.
+The repository intentionally excludes Supabase schemas, authentication, billing, private commercial datasets, production calibration assets, and secrets. Repository readiness is not treated as live deployment proof: the judge environment must also pass the documented ECS, Qwen, provider, and public-UI health checks.
 
 ## Hackathon verification matrix
 
