@@ -1,0 +1,32 @@
+name: runtime-contracts
+
+on:
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  public-runtime:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: pip
+      - run: pip install -r requirements.txt
+      - name: Python syntax
+        run: python -m py_compile api_football_provider.py forensic_data_broker.py live_match_processor.py live_routes.py main.py
+      - name: Provider adapter tests
+        run: python -m unittest discover -s tests -v
+      - name: Deployment manifest syntax
+        run: bash -n deploy.sh
+      - name: Public secret scan
+        run: |
+          ! grep -RInE '(sk-[A-Za-z0-9]{20,}|x-apisports-key["'"']?[[:space:]]*[:=][[:space:]]*["'"'][^"'"']+|SUPABASE_SERVICE_ROLE_KEY=.+)' . \
+            --exclude-dir=.git \
+            --exclude='*.md' \
+            --exclude='.env.example'
