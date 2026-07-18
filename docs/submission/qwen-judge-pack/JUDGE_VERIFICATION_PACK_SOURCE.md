@@ -70,9 +70,9 @@ The current public demo visibly reports Quant Layer `Unavailable`, provider evid
 
 ## Material submission mismatch found
 
-The current Devpost description still states that the broker sits between live providers `(API-Football)` and the runtime and names a fixed Singapore/qwen-plus deployment. Current public source proves a different boundary: request-supplied inputs, zero provider network calls, environment-configured Qwen model, and supplied deployment evidence from Germany (Frankfurt).
+The current Devpost description still states that the broker sits between live providers `(API-Football)` and the runtime and names a fixed Singapore/qwen-plus deployment. Captured video-era UI frames also contain legacy API-Football source labels. Current public source proves a different boundary: request-supplied inputs, zero provider network calls, environment-configured Qwen model, and supplied deployment evidence from Germany (Frankfurt).
 
-Apply `DEVPOST_COPY_PATCH.md` before the deadline.
+Apply `DEVPOST_COPY_PATCH.md` before the deadline and disclose that video-era API-Football labels are historical presentation evidence, not the current isolated request path.
 
 ## Update instructions
 
