@@ -13,19 +13,27 @@ This repository contains an isolated, public-safe implementation of the SignalRe
 | Qwen model usage | `live_match_processor.py` calls the configured Alibaba Cloud Model Studio OpenAI-compatible `/chat/completions` API with `QWEN_MODEL` and `QWEN_API_KEY`. |
 | Reproducibility | `requirements.txt` uses exact `==` pins; local and ECS run instructions are documented below. |
 | Agent Society track | Statistician, Skeptic, Upside Scout, and Orchestrator execute as four sequential, contract-validated Qwen passes. |
+| Judge verification source | `docs/submission/qwen-judge-pack/` maps current source, data states, deployment evidence, judge checks, and Devpost corrections. |
+
+## Judge verification pack
+
+- [`JUDGE_VERIFICATION_PACK_SOURCE.md`](docs/submission/qwen-judge-pack/JUDGE_VERIFICATION_PACK_SOURCE.md) — source text and evidence mapping.
+- [`JUDGE_CHECKLIST.md`](docs/submission/qwen-judge-pack/JUDGE_CHECKLIST.md) — final operator checklist.
+- [`DEVPOST_COPY_PATCH.md`](docs/submission/qwen-judge-pack/DEVPOST_COPY_PATCH.md) — exact replacement copy for current submission mismatches.
+
+The final PDF is generated as a submission artifact and uploaded manually to Devpost Additional info. It is intentionally not required for runtime installation.
 
 ## Verified Alibaba Cloud deployment evidence
 
 The project was deployed and operationally verified on Alibaba Cloud infrastructure before the paid resources were intentionally stopped to prevent further cloud charges. The verified environment included:
 
-- Alibaba Cloud Elastic Compute Service in the Singapore region;
+- Alibaba Cloud Elastic Compute Service in the Germany (Frankfurt) region;
 - Ubuntu 22.04 LTS on an ECS instance;
 - public and private network interfaces with an attached security group;
-- Alibaba Cloud Model Studio with International service deployment scope;
-- a workspace-scoped OpenAI-compatible Model Studio API host;
-- enabled Qwen model deployments, including `qwen3-max` and other Qwen families available to the workspace.
+- Alibaba Cloud Model Studio with an OpenAI-compatible API host supplied at runtime;
+- a server-side, environment-selected Qwen model deployment.
 
-The stopped ECS state does not change reproducibility: `deploy.sh` recreates the documented service on a compatible Ubuntu 22.04 ECS host. Workspace identifiers, instance identifiers, IP addresses, API hosts, and credentials are deliberately not hardcoded in this public repository. The workspace-specific OpenAI-compatible API base URL is supplied at runtime through `QWEN_BASE_URL`.
+The stopped ECS state does not change reproducibility: `deploy.sh` recreates the documented service on a compatible Ubuntu 22.04 ECS host. Workspace identifiers, instance identifiers, IP addresses, API hosts, model identifiers, and credentials are deliberately not hardcoded in this public repository. The workspace-specific OpenAI-compatible API base URL and selected model are supplied at runtime through `QWEN_BASE_URL` and `QWEN_MODEL`.
 
 ## Runtime architecture
 
@@ -35,6 +43,7 @@ request payload
      -> request-supplied provider adapter
      -> deterministic quant-context adapter
      -> non-live Golden Dataset adapter
+     -> qualitative news-context adapter
      -> content-addressed process cache
   -> Statistician Qwen pass
   -> Skeptic Qwen pass
@@ -44,6 +53,8 @@ request payload
 ```
 
 The broker performs **zero external provider calls** in the request path. Repeated equivalent payloads reuse a content-addressed in-process cache, preventing duplicate provider fan-out and preserving quota discipline.
+
+**API-Football is disabled and is not an active source in this isolated public runtime.** Provider observations are supplied in the request. The model cannot invent or fetch missing provider facts.
 
 ## Agent contract
 
@@ -89,6 +100,7 @@ Classifies every specialist claim exactly once as accepted, rejected, or unresol
 ├── requirements.txt          # exact-version runtime dependencies
 ├── .env.example              # empty Vercel/Qwen variable names only
 ├── LICENSE                   # MIT License
+├── docs/submission/qwen-judge-pack/
 └── README.md
 ```
 
@@ -96,9 +108,7 @@ Classifies every specialist claim exactly once as accepted, rejected, or unresol
 
 The runtime uses the official OpenAI-compatible Qwen API contract exposed by Alibaba Cloud Model Studio. `QWEN_BASE_URL` must contain the official workspace-specific or region-specific Model Studio base URL available to the deployment account; the application appends `/chat/completions` at runtime.
 
-`SIGNALREVIEW_REASONING_PROVIDER` must be set to `qwen`. Recommended models for deployment include `qwen-plus`, `qwen2.5-72b-instruct`, or an enabled workspace deployment such as `qwen3-max` via Alibaba Cloud Model Studio.
-
-The model remains environment-configurable so judges can use the Qwen model enabled for their region, workspace, or hackathon entitlement without modifying source code.
+`SIGNALREVIEW_REASONING_PROVIDER` must be set to `qwen`. The model remains environment-configurable through `QWEN_MODEL` so judges can use the Qwen deployment enabled for their region, workspace, or hackathon entitlement without modifying source code.
 
 ## Environment
 
