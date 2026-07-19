@@ -2,48 +2,51 @@
 
 Public hackathon runtime for the **Global AI Hackathon Series with Qwen Cloud**.
 
-This repository contains the isolated, public-safe backend for the SignalReview judge workflow. `deploy.sh` deploys it to Alibaba Cloud ECS, where it can hydrate a bounded evidence packet from API-Football, compute deterministic match context before model inference, and execute four sequential Qwen passes:
+This repository contains the isolated, public-safe backend for the SignalReview judge workflow. `deploy.sh` deploys it to Alibaba Cloud ECS, hydrates a bounded evidence packet from API-Football, computes deterministic match context before model inference, and executes four sequential Qwen passes:
 
 `Statistician → Skeptic → Upside Scout → Orchestrator`
 
-The repository intentionally excludes Supabase schemas, authentication, billing, private commercial datasets, production calibration assets, and secrets. Repository readiness is not treated as live deployment proof: the judge environment must also pass the documented ECS, Qwen, provider, and public-UI health checks.
+The repository intentionally excludes Supabase schemas, authentication, billing, private commercial datasets, production calibration assets, and secrets. Repository readiness is not treated as live deployment proof: the judge environment must also pass the documented ECS, TLS, Qwen, provider, Agent Society, and public-UI checks.
 
 ## Hackathon verification matrix
 
 | Requirement | Repository evidence |
 | --- | --- |
 | Open-source license | Root `LICENSE` contains the MIT License. |
-| Alibaba Cloud deployment | `deploy.sh` installs the FastAPI backend as a `systemd` service on Ubuntu 22.04 ECS. |
+| Alibaba Cloud deployment | `deploy.sh` installs FastAPI plus an HTTPS Caddy reverse proxy on Ubuntu 22.04 ECS. |
 | Qwen Cloud usage | `live_match_processor.py` calls the configured Model Studio OpenAI-compatible `/chat/completions` endpoint. |
 | Agent Society | Four sequential, role-specific Qwen passes with contract validation and deterministic recovery. |
 | Live sports evidence | `api_football_provider.py` provides a quota-safe server-side API-Football adapter. |
-| Architecture and judge evidence | `docs/submission/qwen-judge-pack/` and the repository source. |
+| Judge verification | `scripts/verify_public_runtime.py` executes health, provider-backed, and incomplete-evidence checks against the public HTTPS runtime. |
+| Architecture and submission evidence | `docs/submission/qwen-judge-pack/` and the repository source. |
 
 ## Runtime architecture
 
 ```text
-SignalReview judge UI
-  → Alibaba Cloud ECS / FastAPI
-    → API-Football adapter
-       - server-only key
-       - current fixture inventory
-       - recent form and H2H observations
-       - process cache
-       - daily request budget
-    → deterministic quant adapter
-       - lambda estimates
-       - 1/X/2 distribution
-       - O2.5 and BTTS estimates
-       - evidence-completeness discount
-    → forensic evidence broker
-       - observed provider rows
-       - deterministic-derived rows
-       - explicit missing domains
-    → Statistician Qwen pass
-    → Skeptic Qwen pass
-    → Upside Scout Qwen pass
-    → Orchestrator Qwen pass
-    → validated dashboard-ready JSON
+SignalReview judge UI on Vercel
+  → HTTPS public hostname
+    → Caddy on Alibaba Cloud ECS
+      → FastAPI on 127.0.0.1
+        → API-Football adapter
+           - server-only key
+           - current fixture inventory
+           - recent form and H2H observations
+           - process cache
+           - daily request budget
+        → deterministic quant adapter
+           - lambda estimates
+           - 1/X/2 distribution
+           - O2.5 and BTTS estimates
+           - evidence-completeness discount
+        → forensic evidence broker
+           - observed provider rows
+           - deterministic-derived rows
+           - explicit missing domains
+        → Statistician Qwen pass
+        → Skeptic Qwen pass
+        → Upside Scout Qwen pass
+        → Orchestrator Qwen pass
+        → validated dashboard-ready JSON
 ```
 
 ## Data and safety boundaries
@@ -57,6 +60,7 @@ SignalReview judge UI
 - Golden Dataset fields, when supplied, are non-live calibration only.
 - No certainty, guaranteed outcome, ROI, accuracy, bookmaker, staking, or gambling instructions are produced.
 - Invalid Qwen output triggers deterministic contract-safe recovery.
+- Uvicorn binds only to `127.0.0.1`; Caddy owns public ports 80 and 443 and automatically provisions TLS after DNS resolves.
 
 ## Agent contract
 
@@ -85,7 +89,8 @@ Classifies specialist claims as accepted, rejected, or unresolved, applies the e
 ├── live_match_processor.py        # four Qwen agents and validators
 ├── live_routes.py                 # FastAPI routes
 ├── main.py                        # FastAPI application
-├── deploy.sh                      # Alibaba Cloud ECS deployment manifest
+├── deploy.sh                      # ECS + systemd + Caddy HTTPS deployment manifest
+├── scripts/verify_public_runtime.py
 ├── requirements.txt               # exact-version dependencies
 ├── tests/                         # provider/runtime contract tests
 ├── .env.example                   # names and non-secret defaults only
@@ -119,6 +124,14 @@ Required live provider variable:
 API_FOOTBALL_KEY
 ```
 
+Required public deployment variable:
+
+```text
+PUBLIC_HOSTNAME
+```
+
+`PUBLIC_HOSTNAME` is the hostname only, without `https://`, path, or port. Its DNS A/AAAA record must resolve to the ECS instance before `deploy.sh` performs the final public HTTPS check.
+
 Quota-safe defaults:
 
 ```text
@@ -129,7 +142,7 @@ API_FOOTBALL_TIMEOUT_MS=8000
 ALLOWED_ORIGINS=https://signalreview.co
 ```
 
-The runtime budget is intentionally below the API-Football free-plan daily ceiling, leaving reserve capacity for health and manual verification.
+The runtime budget is below the API-Football free-plan daily ceiling, leaving reserve capacity for health and manual verification.
 
 ## Local run
 
@@ -140,7 +153,7 @@ python3 -m venv .venv
 source .venv/bin/activate
 pip install --upgrade pip
 pip install -r requirements.txt
-uvicorn main:app --host 0.0.0.0 --port 8000 --reload
+uvicorn main:app --host 127.0.0.1 --port 8000 --reload
 ```
 
 ## API
@@ -169,7 +182,7 @@ The response reports configuration, process request count, cache size, and provi
 ### Current judge fixtures
 
 ```bash
-curl 'http://127.0.0.1:8000/api/judge-fixtures?days=3&limit=6'
+curl 'http://127.0.0.1:8000/api/judge-fixtures?days=7&limit=6'
 ```
 
 ### Provider-backed four-agent review
@@ -182,25 +195,31 @@ curl -X POST http://127.0.0.1:8000/api/review-provider-fixture \
 
 The endpoint fetches observed provider evidence, computes deterministic estimates, then runs the four Qwen agents.
 
-### Request-supplied four-agent review
-
-The original controlled path remains available for reproducible missing-data and adversarial tests:
+### Request-supplied incomplete-evidence review
 
 ```bash
 curl -X POST http://127.0.0.1:8000/api/review-live-match \
   -H 'Content-Type: application/json' \
   -d '{
-    "match_id": "public-demo",
-    "home_team": "Home Team",
-    "away_team": "Away Team",
-    "provider_snapshot": {"home_shots": 11, "away_shots": 8},
-    "quant_context": {"home_control_index": 0.61, "away_control_index": 0.39}
+    "match_id": "judge-incomplete-evidence",
+    "home_team": "Incomplete Evidence Home",
+    "away_team": "Incomplete Evidence Away",
+    "provider_snapshot": {"observed_fixture_count": 1},
+    "quant_context": {"evidence_completeness": 0.1}
   }'
 ```
 
 ## Alibaba Cloud ECS deployment
 
-Export the required Qwen and API-Football variables, `REPO_URL`, and optionally the quota/cache settings, then run:
+Before deployment:
+
+1. start or create an Ubuntu 22.04 ECS instance;
+2. point a DNS A/AAAA record for `PUBLIC_HOSTNAME` to the instance;
+3. allow inbound TCP 80 and 443 in the ECS security group;
+4. keep port 8000 closed publicly;
+5. export the Qwen, API-Football, repository, and public-hostname variables.
+
+Run:
 
 ```bash
 sudo -E bash deploy.sh
@@ -208,14 +227,47 @@ sudo -E bash deploy.sh
 
 The script:
 
-1. validates required server-only variables;
-2. installs the runtime dependencies;
-3. clones or updates the public repository;
+1. validates required server-only variables and the public hostname;
+2. installs Python runtime dependencies and Caddy;
+3. clones or fast-forwards the public repository without discarding unknown local changes;
 4. writes a permission-restricted `.env`;
-5. creates and starts a `systemd` service;
-6. verifies backend and provider health locally.
+5. creates and starts the loopback-only FastAPI `systemd` service;
+6. configures Caddy automatic HTTPS and security headers;
+7. verifies local backend/provider health;
+8. verifies the public HTTPS health endpoint.
 
 No endpoint, model identifier, API key, production hostname, instance identifier, or account identifier is committed.
+
+## Public end-to-end verification
+
+After DNS, TLS, Qwen, and API-Football are active:
+
+```bash
+PUBLIC_BASE_URL="https://${PUBLIC_HOSTNAME}" \
+  python3 scripts/verify_public_runtime.py
+```
+
+The smoke test fails unless all of the following are true:
+
+- backend, Qwen, model entitlement, and provider health pass;
+- at least one current provider fixture is available;
+- the provider-backed review returns Statistician, Skeptic, Upside Scout, and Orchestrator in order;
+- Qwen reports `reasoning_status=ready`;
+- Orchestrator classifies every specialist claim exactly once;
+- the incomplete-evidence scenario exposes missing data, avoids High confidence, and retains at least one unresolved claim.
+
+Only the sanitized verification summary is printed; keys and raw provider bodies are never emitted.
+
+## Vercel integration
+
+Set these server-only production variables on the linked SignalReview project:
+
+```text
+QWEN_JUDGE_RUNTIME_BASE_URL=https://<PUBLIC_HOSTNAME>
+QWEN_JUDGE_RUNTIME_TIMEOUT_MS=48000
+```
+
+Redeploy production after changing environment variables. The browser never receives the Qwen or API-Football credentials.
 
 ## Judge verification pack
 
