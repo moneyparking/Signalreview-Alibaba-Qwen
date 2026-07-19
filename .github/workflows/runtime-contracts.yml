@@ -19,11 +19,22 @@ jobs:
           cache: pip
       - run: pip install -r requirements.txt
       - name: Python syntax
-        run: python -m py_compile api_football_provider.py forensic_data_broker.py live_match_processor.py live_routes.py main.py
+        run: python -m py_compile api_football_provider.py forensic_data_broker.py live_match_processor.py live_routes.py main.py scripts/verify_public_runtime.py
       - name: Provider adapter tests
         run: python -m unittest discover -s tests -v
       - name: Deployment manifest syntax
         run: bash -n deploy.sh
+      - name: HTTPS deployment contract
+        run: |
+          grep -Fq 'PUBLIC_HOSTNAME' deploy.sh
+          grep -Fq 'caddy validate --config /etc/caddy/Caddyfile' deploy.sh
+          grep -Fq -- '--host 127.0.0.1' deploy.sh
+          grep -Fq 'PUBLIC_BASE_URL="https://${PUBLIC_HOSTNAME}"' deploy.sh
+          grep -Fq 'curl --retry 12' deploy.sh
+          ! grep -Fq -- '--host 0.0.0.0' deploy.sh
+          grep -Fq '/api/review-provider-fixture' scripts/verify_public_runtime.py
+          grep -Fq 'incomplete_evidence_agent_society' scripts/verify_public_runtime.py
+          grep -Fq 'Orchestrator did not classify every specialist claim exactly once' scripts/verify_public_runtime.py
       - name: Public secret scan
         run: |
           ! grep -RInE 'sk-[A-Za-z0-9]{20,}|SUPABASE_SERVICE_ROLE_KEY=.+' . --exclude-dir=.git --exclude='*.md' --exclude='.env.example'
